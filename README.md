@@ -114,16 +114,19 @@ For commercial licensing inquiries, contact the repository owner via GitHub.
 
 This project relies on several open-source tools:
 
-- [android-tools](https://github.com/nmeum/android-tools) (Apache-2.0) — Android platform utilities
-- [apktool](https://github.com/iBotPeaches/Apktool) (Apache-2.0) — APK reverse engineering
-- [erofs-utils](https://github.com/sekaiacg/erofs-utils) (GPL-2.0/Apache-2.0) — EROFS filesystem tools
-- [lpunpack/lpdump](https://github.com/LonelyFool/lpunpack_and_lpmake) (Apache-2.0) — Dynamic partition unpacking
-- [platform/build](https://android.googlesource.com/platform/build) (Apache-2.0) — Android build system
-- [e2fsprogs](https://github.com/tytso/e2fsprogs) (GPL-2.0/LGPL-2.1) — Ext4 filesystem utilities
-- [xz](https://github.com/tukaani-project/xz) (LGPL-2.1/GPL-2.0) — Compression library
-- [lz4](https://github.com/lz4/lz4) (BSD-2-Clause) — Fast compression
+- [nmeum/android-tools](https://github.com/nmeum/android-tools) (Apache-2.0) - simg2img, img2simg, ext2simg, append2simg
+- [LonelyFool/lpunpack_and_lpmake](https://github.com/LonelyFool/lpunpack_and_lpmake) (Apache-2.0) - lpunpack, lpdump, lpmake
+- [sekaiacg/erofs-utils](https://github.com/sekaiacg/erofs-utils) (GPL-2.0/Apache-2.0) - EROFS filesystem tools
+- [AOSP platform/external/avb](https://android.googlesource.com/platform/external/avb) (Apache-2.0) - avbtool
+- [AOSP platform/external/e2fsprogs](https://android.googlesource.com/platform/external/e2fsprogs) (Apache-2.0) - e2fsdroid, mke2fs.android
+- [AOSP platform/external/f2fs-tools](https://android.googlesource.com/platform/external/f2fs-tools) (Apache-2.0) - make_f2fs, sload_f2fs
+- [AOSP platform/system/tools/mkbootimg](https://android.googlesource.com/platform/system/tools/mkbootimg) (Apache-2.0) - mkbootimg, unpack_bootimg, repack_bootimg
+- [AOSP platform/system/libufdt](https://android.googlesource.com/platform/system/libufdt) (Apache-2.0) - mkdtboimg
+- [tytso/e2fsprogs](https://github.com/tytso/e2fsprogs) (GPL-2.0/LGPL-2.1) - debugfs
+- [tukaani/xz](https://github.com/tukaani-project/xz) (LGPL-2.1/GPL-2.0) - xz compression
+- [lz4](https://github.com/lz4/lz4) (BSD-2-Clause) - LZ4 compression
 
-Upload integration via [GoFile API](https://gofile.io/api) and inspired by [Sushrut1101/GoFile-Upload](https://github.com/Sushrut1101/GoFile-Upload).
+Upload integration via [GoFile API](https://gofile.io/api).
 
 ## Credits
 
