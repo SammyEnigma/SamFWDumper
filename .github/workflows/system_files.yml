@@ -120,29 +120,6 @@ jobs:
       - name: Make tools executable
         run: chmod +x tools/android-tools/* tools/erofs-utils/* upload_gofile.sh scripts/system_files.sh
 
-      - name: Get AP Info
-        id: apinfo
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          curl -sL --range 0-2097151 "${{ github.event.inputs.url }}" > /tmp/fw_peek.bin
-          AP_FILE=$(strings /tmp/fw_peek.bin | grep -oP 'AP_\w+\.(tar\.md5|tar)' | head -1)
-          rm -f /tmp/fw_peek.bin
-          AP_SEGMENT=$(echo "$AP_FILE" | cut -d'_' -f2)
-          RELEASE_DATE=$(date +"%-d-%-m-%Y %-I:%M %p")
-          BASE_TAG=$(date +"%d%m%Y_%H,%M,%S")
-          RELEASE_TAG="$BASE_TAG"
-          if gh release view "$RELEASE_TAG" &>/dev/null 2>&1; then
-            SUFFIX=1
-            while gh release view "${BASE_TAG}_${SUFFIX}" &>/dev/null 2>&1; do
-              SUFFIX=$((SUFFIX + 1))
-            done
-            RELEASE_TAG="${BASE_TAG}_${SUFFIX}"
-          fi
-          echo "ap_segment=$AP_SEGMENT" >> $GITHUB_OUTPUT
-          echo "release_date=$RELEASE_DATE" >> $GITHUB_OUTPUT
-          echo "release_tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
-
       - name: Run System Files Extraction
         run: |
           bash scripts/system_files.sh \
@@ -163,6 +140,26 @@ jobs:
             "${{ github.event.inputs.extract_framework_rro }}" \
             "${{ github.event.inputs.extract_pit }}" \
             "${{ github.event.inputs.extract_wallpaper_res }}"
+
+      - name: Get Firmware Info
+        id: fwinfo
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          AP_CODE=$(cat ap_code.txt 2>/dev/null || echo "Unknown")
+          CSC_CODE=$(cat csc_code.txt 2>/dev/null || echo "Unknown")
+          BASE_TAG=$(date +"%d%m%Y_%H,%M,%S")
+          RELEASE_TAG="$BASE_TAG"
+          if gh release view "$RELEASE_TAG" &>/dev/null 2>&1; then
+            SUFFIX=1
+            while gh release view "${BASE_TAG}_${SUFFIX}" &>/dev/null 2>&1; do
+              SUFFIX=$((SUFFIX + 1))
+            done
+            RELEASE_TAG="${BASE_TAG}_${SUFFIX}"
+          fi
+          echo "ap_code=$AP_CODE" >> $GITHUB_OUTPUT
+          echo "csc_code=$CSC_CODE" >> $GITHUB_OUTPUT
+          echo "release_tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
 
       - name: Upload to GoFile
         if: ${{ github.event.inputs.upload_destination == 'gofile' }}
@@ -212,8 +209,8 @@ jobs:
             fi
           done
 
-          gh release create "${{ steps.apinfo.outputs.release_tag }}" \
-            --title "${{ steps.apinfo.outputs.ap_segment }} | ${{ steps.apinfo.outputs.release_date }}" \
+          gh release create "${{ steps.fwinfo.outputs.release_tag }}" \
+            --title "${{ steps.fwinfo.outputs.ap_code }} | ${{ steps.fwinfo.outputs.csc_code }}" \
             --notes-file "$NOTES_FILE" \
             "${ASSETS[@]}"
 
