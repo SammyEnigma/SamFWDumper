@@ -48,11 +48,22 @@ for PART in $SELECTED_PARTITIONS; do
 done
 
 echo ""; echo "[1/5] Downloading..."
-wget --no-check-certificate -O "firmware.zip" "$URL" 2>&1 | tail -3
-[ ! -f "firmware.zip" ] && { echo "❌ Download failed"; exit 1; }
-FILESIZE=$(stat -c%s "firmware.zip")
+wget --no-check-certificate --content-disposition "$URL" 2>&1 | tail -3
+ZIP_FILE=$(ls -t *.zip 2>/dev/null | head -1)
+[ ! -f "$ZIP_FILE" ] && { echo "❌ Download failed"; exit 1; }
+FILESIZE=$(stat -c%s "$ZIP_FILE")
 [ "$FILESIZE" -eq 0 ] && { echo "❌ Empty file"; exit 1; }
 echo "✅ Downloaded: $(numfmt --to=iec $FILESIZE)"
+
+# Extract CSC and AP from zip filename
+CSC_CODE=$(echo "$ZIP_FILE" | sed 's/\.zip$//' | tr '_' '\n' | grep -E '^[A-Z]{3}$' | grep -v -E '^(COM|SAM|FAC)$' | head -1)
+AP_CODE=$(echo "$ZIP_FILE" | sed 's/\.zip$//' | tr '_' '\n' | grep -E '^[A-Z][A-Z0-9]{11,}$' | head -1)
+echo "$CSC_CODE" > csc_code.txt
+echo "$AP_CODE" > ap_code.txt
+echo "Firmware: $AP_CODE | CSC: $CSC_CODE"
+
+# Rename to firmware.zip for the rest of the script
+mv "$ZIP_FILE" firmware.zip
 
 echo ""; echo "[2/5] Extracting ZIP..."
 unzip -o "firmware.zip" >/dev/null 2>&1
@@ -80,7 +91,6 @@ mkdir -p processed
 # Process individual partitions first (keep original names: _a, _b, or none)
 echo "  Processing individual partitions..."
 for PART in $SELECTED_PARTITIONS; do
-  # Skip if already processed
   [ -f "processed/${PART}.img.xz" ] && continue
   [ -f "processed/${PART}_a.img.xz" ] && continue
   [ -f "processed/${PART}_b.img.xz" ] && continue
@@ -89,13 +99,11 @@ for PART in $SELECTED_PARTITIONS; do
   if [ -n "$FILE" ] && [ -f "$FILE" ]; then
     echo "    ✓ Found: $(basename "$FILE")"
     
-    # Decompress LZ4 if needed
     if [[ "$FILE" == *.lz4 ]]; then
       lz4 -d "$FILE" "${FILE%.lz4}" 2>/dev/null || true
       FILE="${FILE%.lz4}"
     fi
     
-    # Keep original basename and compress
     BASENAME=$(basename "$FILE")
     if xz $XZ_FLAGS -T0 "$FILE" 2>/dev/null; then
       mv "${FILE}.xz" "processed/${BASENAME}.xz"
@@ -110,14 +118,12 @@ SUPER_FILE=$(find . -maxdepth 1 -name "super.img*" | head -n 1)
 if $NEED_SUPER && [ -n "$SUPER_FILE" ] && [ -f "$SUPER_FILE" ]; then
   echo ""; echo "  Extracting super.img..."
   
-  # Decompress LZ4
   if [[ "$SUPER_FILE" == *.lz4 ]]; then
     echo "    Decompressing LZ4..."
     lz4 -d "$SUPER_FILE" "super.img" 2>/dev/null || { echo "    ❌ LZ4 failed"; exit 1; }
     SUPER_FILE="super.img"
   fi
   
-  # Convert sparse if needed
   if file "$SUPER_FILE" 2>/dev/null | grep -q "sparse"; then
     echo "    Converting sparse image..."
     if command -v simg2img &>/dev/null; then
@@ -131,7 +137,6 @@ if $NEED_SUPER && [ -n "$SUPER_FILE" ] && [ -f "$SUPER_FILE" ]; then
     [ -f "super.raw.img" ] && SUPER_FILE="super.raw.img"
   fi
   
-  # Extract with lpunpack
   echo "    Extracting dynamic partitions..."
   mkdir -p super_dump
   
@@ -142,10 +147,8 @@ if $NEED_SUPER && [ -n "$SUPER_FILE" ] && [ -f "$SUPER_FILE" ]; then
     exit 1
   fi
   
-  # ONLY compress selected partitions (keep original names: _a, _b, or none)
   echo "    Compressing ONLY selected partitions..."
   for PART in $SELECTED_PARTITIONS; do
-    # Try _a slot first, then non-suffixed, then _b slot
     for SUFFIX in "_a" "" "_b"; do
       IMG_FILE="super_dump/${PART}${SUFFIX}.img"
       if [ -f "$IMG_FILE" ]; then
@@ -156,7 +159,7 @@ if $NEED_SUPER && [ -n "$SUPER_FILE" ] && [ -f "$SUPER_FILE" ]; then
         else
           cp "$IMG_FILE" "processed/${BASENAME}"
         fi
-        break  # Move to next partition once we find it
+        break
       fi
     done
   done
