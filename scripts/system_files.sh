@@ -35,7 +35,6 @@ WANT_WALLPAPER_RES="${17:-false}"
 
 chmod +x tools/android-tools/* tools/erofs-utils/* 2>/dev/null || true
 
-# Set compression flag
 case "$COMPRESSION_LEVEL" in
   0) XZ_FLAGS="-0" ;;
   3) XZ_FLAGS="-3" ;;
@@ -44,7 +43,6 @@ case "$COMPRESSION_LEVEL" in
   *) XZ_FLAGS="-0" ;;
 esac
 
-# Build TARGETS list (folders + config + build.prop)
 TARGETS=""
 [ "$WANT_APP" = "true" ] && TARGETS="$TARGETS app"
 [ "$WANT_BIN" = "true" ] && TARGETS="$TARGETS bin"
@@ -59,27 +57,33 @@ TARGETS=""
 [ "$WANT_BUILD_PROP" = "true" ] && TARGETS="$TARGETS build.prop"
 TARGETS="${TARGETS# }"
 
-# Validation
 if [ -z "$TARGETS" ] && [ "$WANT_SUPER_CONFIG" != "true" ] && [ "$WANT_FRAMEWORK_RRO" != "true" ] && [ "$WANT_PIT" != "true" ] && [ "$WANT_WALLPAPER_RES" != "true" ]; then
   echo "❌ No targets selected!"
   exit 1
 fi
 
 echo ""; echo "[1/8] Downloading..."
-wget -q --no-check-certificate -O "firmware.zip" "$URL"
-[ ! -f "firmware.zip" ] && { echo "❌ Download failed"; exit 1; }
-FILESIZE=$(stat -c%s "firmware.zip")
+wget -q --no-check-certificate --content-disposition "$URL"
+ZIP_FILE=$(ls -t *.zip 2>/dev/null | head -1)
+[ ! -f "$ZIP_FILE" ] && { echo "❌ Download failed"; exit 1; }
+FILESIZE=$(stat -c%s "$ZIP_FILE")
 [ "$FILESIZE" -eq 0 ] && { echo "❌ Empty file"; exit 1; }
 echo "✅ Downloaded: $(numfmt --to=iec $FILESIZE)"
 
+# Extract CSC and AP from zip filename
+CSC_CODE=$(echo "$ZIP_FILE" | sed 's/\.zip$//' | tr '_' '\n' | grep -E '^[A-Z]{3}$' | grep -v -E '^(COM|SAM|FAC)$' | head -1)
+AP_CODE=$(echo "$ZIP_FILE" | sed 's/\.zip$//' | tr '_' '\n' | grep -E '^[A-Z][A-Z0-9]{11,}$' | head -1)
+echo "$CSC_CODE" > csc_code.txt
+echo "$AP_CODE" > ap_code.txt
+echo "Firmware: $AP_CODE | CSC: $CSC_CODE"
+
 echo ""; echo "[2/8] Extracting ZIP..."
-unzip -o "firmware.zip" >/dev/null 2>&1
-rm -f "firmware.zip"
+unzip -o "$ZIP_FILE" >/dev/null 2>&1
+rm -f "$ZIP_FILE"
 echo "✅ Done"
 
 mkdir -p output
 
-# ── PIT extraction from CSC tar ──────────────────────────────────────────
 if [ "$WANT_PIT" = "true" ]; then
   echo ""; echo "[3/8] Extracting PIT from CSC..."
   CSC_FILE=$(find . -maxdepth 1 -name "CSC_*.tar.md5" -o -name "CSC_*.tar" | head -n 1)
@@ -98,7 +102,6 @@ else
   echo ""; echo "[3/8] PIT extraction skipped"
 fi
 
-# ── AP extraction ────────────────────────────────────────────────────────
 echo ""; echo "[4/8] Extracting AP..."
 AP_FILE=$(find . -name "AP_*.tar.md5" -o -name "AP_*.tar" | head -n 1)
 [ -z "$AP_FILE" ] && { echo "❌ AP file not found"; exit 1; }
@@ -106,11 +109,9 @@ tar -xf "$AP_FILE" >/dev/null 2>&1
 rm -f "$AP_FILE"
 echo "✅ Done"
 
-# ── System & Product image setup ─────────────────────────────────────────
 echo ""; echo "[5/8] Getting system.img and product.img..."
 SUPER_FILE=$(find . -maxdepth 1 -name "super.img*" -o -name "super.img" | head -n 1)
 if [ -n "$SUPER_FILE" ]; then
-  # Dynamic partition device
   if [[ "$SUPER_FILE" == *.lz4 ]]; then
     lz4 -d "$SUPER_FILE" "super.img" 2>/dev/null
     SUPER_FILE="super.img"
@@ -122,7 +123,6 @@ if [ -n "$SUPER_FILE" ]; then
   mkdir -p super_dump
   tools/android-tools/lpunpack "$SUPER_FILE" super_dump 2>/dev/null
 
-  # Super config
   if [ "$WANT_SUPER_CONFIG" = "true" ]; then
     if [ -d "super_dump/configs" ]; then
       cp -r "super_dump/configs" "output/super_config"
@@ -139,8 +139,7 @@ if [ -n "$SUPER_FILE" ]; then
   SYSTEM_IMG=$(find super_dump -name "system.img" -o -name "system_a.img" | head -n 1)
   PRODUCT_IMG=$(find super_dump -name "product.img" -o -name "product_a.img" | head -n 1)
 else
-  # Legacy device
-  [ "$WANT_SUPER_CONFIG" = "true" ] && echo "  ⚠️ Legacy device — super config not available"
+  [ "$WANT_SUPER_CONFIG" = "true" ] && echo "  ⚠️ Legacy device - super config not available"
   SYSTEM_IMG=$(find . -maxdepth 1 -name "system.img.lz4" -o -name "system.img" | head -n 1)
   if [[ "$SYSTEM_IMG" == *.lz4 ]]; then
     lz4 -d "$SYSTEM_IMG" "system_raw.img" 2>/dev/null
@@ -161,7 +160,6 @@ else
   fi
 fi
 
-# ── product.img extraction (framework RRO APK) ───────────────────────────
 if [ "$WANT_FRAMEWORK_RRO" = "true" ]; then
   echo ""; echo "[6/8] Extracting framework RRO APK..."
   if [ -z "$PRODUCT_IMG" ] || [ ! -f "$PRODUCT_IMG" ]; then
@@ -203,9 +201,8 @@ else
   echo ""; echo "[6/8] Product extraction skipped"
 fi
 
-# ── system.img extraction ────────────────────────────────────────────────
 if [ -z "$TARGETS" ] && [ "$WANT_WALLPAPER_RES" != "true" ]; then
-  echo ""; echo "[7/8] No system targets — skipping"
+  echo ""; echo "[7/8] No system targets - skipping"
 else
   [ -z "$SYSTEM_IMG" ] || [ ! -f "$SYSTEM_IMG" ] && { echo "❌ system.img not found"; exit 1; }
   echo ""; echo "[7/8] Extracting system.img contents..."
@@ -216,7 +213,7 @@ else
   if tools/erofs-utils/extract.erofs -i "$SYSTEM_IMG" -x -o system_extracted/ >/dev/null 2>&1; then
     echo "  ✅ Extracted via erofs"
   else
-    echo "  erofs failed — trying debugfs..."
+    echo "  erofs failed - trying debugfs..."
     DEBUGFS_TARGETS="$TARGETS"
     [ "$WANT_WALLPAPER_RES" = "true" ] && DEBUGFS_TARGETS="$DEBUGFS_TARGETS priv-app/wallpaper-res"
 
@@ -251,10 +248,8 @@ else
     done
   fi
 
-  # ── Copy targets to output ─────────────────────────────────────────────
   echo ""; echo "[8/8] Copying selected targets..."
 
-  # wallpaper-res.apk special handling
   if [ "$WANT_WALLPAPER_RES" = "true" ]; then
     APK_FOUND=false
     for BASE in \
@@ -298,31 +293,25 @@ else
   rm -rf system_extracted
 fi
 
-# Cleanup
 rm -rf super_dump super.img super.raw.img system_unsparse.img product_raw.img product_unsparse.img system_raw.img
 
-# Package output — always tar directories so upload doesn't fail
 echo ""; echo "Packaging output..."
 for ITEM in output/*; do
   [ -e "$ITEM" ] || continue
   NAME=$(basename "$ITEM")
   if [ -d "$ITEM" ]; then
     if [ "$COMPRESSION_LEVEL" != "0" ]; then
-      # Level 3/6/9: tar + xz compress
       tar -cf - -C output "$NAME" | xz $XZ_FLAGS -T0 2>/dev/null > "output/${NAME}.tar.xz" && rm -rf "$ITEM"
       echo "    ✓ ${NAME}.tar.xz"
     else
-      # Level 0: tar only, no compression
       tar -cf "output/${NAME}.tar" -C output "$NAME" && rm -rf "$ITEM"
       echo "    ✓ ${NAME}.tar"
     fi
   elif [ -f "$ITEM" ] && [ "$COMPRESSION_LEVEL" != "0" ] && [[ "$ITEM" != *.xz ]]; then
-    # Single files: xz compress only if compression is on
     xz $XZ_FLAGS -T0 "$ITEM" 2>/dev/null && echo "    ✓ ${NAME}.xz" || true
   fi
 done
 
-# Results
 echo ""; echo "═══════════════════════════════════════"
 FILE_COUNT=$(ls -1 output 2>/dev/null | wc -l)
 [ "$FILE_COUNT" -eq 0 ] && { echo "❌ Nothing extracted!"; exit 1; }
