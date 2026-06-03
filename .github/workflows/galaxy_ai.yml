@@ -20,67 +20,67 @@ on:
       zip_type:
         description: 'Output structure'
         required: true
-        default: 'galaxyai'
+        default: 'MODULES_USAGE'
         type: choice
         options:
-        - 'galaxyai'
-        - 'soon'
+        - 'MODULES_USAGE'
+        - 'PORT_USAGE'
       feature_alkernel:
         description: 'AlKernel'
         type: boolean
-        default: false
+        default: true
       feature_bixbyinterpreter:
         description: 'BixbyInterpreter'
         type: boolean
-        default: false
+        default: true
       feature_mediasearch:
         description: 'MediaSearch'
         type: boolean
-        default: false
+        default: true
       feature_moments:
         description: 'Moments'
         type: boolean
-        default: false
-      feature_offlinelanguagemodel_stub:
-        description: 'OfflineLanguageModel_stub'
+        default: true
+      feature_offlinelanguagemodel:
+        description: 'OfflineLanguageModel'
         type: boolean
-        default: false
-      feature_photoeditor_afull:
-        description: 'PhotoEditor_AFull'
+        default: true
+      feature_photoeditor:
+        description: 'PhotoEditor'
         type: boolean
-        default: false
-      feature_samsunggallery2018:
-        description: 'Samsung Gallery2018'
+        default: true
+      feature_samsunggallery:
+        description: 'Samsung Gallery'
         type: boolean
-        default: false
+        default: true
       feature_samsungsmartsuggestions:
         description: 'SamsungSmartSuggestions'
         type: boolean
-        default: false
+        default: true
       feature_secsettingsintelligence:
         description: 'SecSettingsIntelligence'
         type: boolean
-        default: false
-      feature_semanticsearchcore:
+        default: true
+      feature_semanticsearch:
         description: 'SemanticSearch Core'
         type: boolean
-        default: false
+        default: true
       feature_spritewallpaper:
         description: 'Sprite Wallpaper'
         type: boolean
-        default: false
+        default: true
       feature_storyservice:
         description: 'StoryService'
         type: boolean
-        default: false
-      feature_visionmodel_stub:
-        description: 'VisionModel-Stub'
+        default: true
+      feature_visionmodel:
+        description: 'VisionModel'
         type: boolean
-        default: false
-      feature_wallpapermagician_stub:
-        description: 'WallpaperMagician-Stub'
+        default: true
+      feature_wallpapermagician:
+        description: 'WallpaperMagician'
         type: boolean
-        default: false
+        default: true
       upload_destination:
         description: 'Upload destination'
         required: true
@@ -123,16 +123,16 @@ jobs:
             "${{ github.event.inputs.feature_bixbyinterpreter }}" \
             "${{ github.event.inputs.feature_mediasearch }}" \
             "${{ github.event.inputs.feature_moments }}" \
-            "${{ github.event.inputs.feature_offlinelanguagemodel_stub }}" \
-            "${{ github.event.inputs.feature_photoeditor_afull }}" \
-            "${{ github.event.inputs.feature_samsunggallery2018 }}" \
+            "${{ github.event.inputs.feature_offlinelanguagemodel }}" \
+            "${{ github.event.inputs.feature_photoeditor }}" \
+            "${{ github.event.inputs.feature_samsunggallery }}" \
             "${{ github.event.inputs.feature_samsungsmartsuggestions }}" \
             "${{ github.event.inputs.feature_secsettingsintelligence }}" \
-            "${{ github.event.inputs.feature_semanticsearchcore }}" \
+            "${{ github.event.inputs.feature_semanticsearch }}" \
             "${{ github.event.inputs.feature_spritewallpaper }}" \
             "${{ github.event.inputs.feature_storyservice }}" \
-            "${{ github.event.inputs.feature_visionmodel_stub }}" \
-            "${{ github.event.inputs.feature_wallpapermagician_stub }}"
+            "${{ github.event.inputs.feature_visionmodel }}" \
+            "${{ github.event.inputs.feature_wallpapermagician }}"
 
       - name: Get Firmware Info
         id: fwinfo
