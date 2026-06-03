@@ -20,11 +20,11 @@ on:
       zip_type:
         description: 'Output structure'
         required: true
-        default: 'MODULES_USAGE'
+        default: 'For_Modules'
         type: choice
         options:
-        - 'MODULES_USAGE'
-        - 'PORT_USAGE'
+        - 'For_Modules'
+        - 'For_Ports'
       feature_alkernel:
         description: 'AlKernel'
         type: boolean
