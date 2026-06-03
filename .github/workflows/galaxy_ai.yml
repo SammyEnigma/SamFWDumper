@@ -1,0 +1,199 @@
+# =============================================================================
+# SamFWDumper - Automated Samsung Firmware Extraction
+# Copyright (C) 2026 Xiatsuma
+# Licensed under PolyForm Noncommercial License 1.0.0
+# https://polyformproject.org/licenses/noncommercial/1.0.0
+#
+# You may NOT use this file except in compliance with the License.
+# Commercial use, removal of this header, or distribution without attribution
+# is strictly prohibited. For permissions: https://github.com/Xiatsuma
+# =============================================================================
+
+name: Galaxy AI Extractor
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'SamFW Direct Download Link'
+        required: true
+      zip_type:
+        description: 'Output structure'
+        required: true
+        default: 'galaxyai'
+        type: choice
+        options:
+        - 'galaxyai'
+        - 'soon'
+      feature_alkernel:
+        description: 'AlKernel'
+        type: boolean
+        default: false
+      feature_bixbyinterpreter:
+        description: 'BixbyInterpreter'
+        type: boolean
+        default: false
+      feature_mediasearch:
+        description: 'MediaSearch'
+        type: boolean
+        default: false
+      feature_moments:
+        description: 'Moments'
+        type: boolean
+        default: false
+      feature_offlinelanguagemodel_stub:
+        description: 'OfflineLanguageModel_stub'
+        type: boolean
+        default: false
+      feature_photoeditor_afull:
+        description: 'PhotoEditor_AFull'
+        type: boolean
+        default: false
+      feature_samsunggallery2018:
+        description: 'Samsung Gallery2018'
+        type: boolean
+        default: false
+      feature_samsungsmartsuggestions:
+        description: 'SamsungSmartSuggestions'
+        type: boolean
+        default: false
+      feature_secsettingsintelligence:
+        description: 'SecSettingsIntelligence'
+        type: boolean
+        default: false
+      feature_semanticsearchcore:
+        description: 'SemanticSearch Core'
+        type: boolean
+        default: false
+      feature_spritewallpaper:
+        description: 'Sprite Wallpaper'
+        type: boolean
+        default: false
+      feature_storyservice:
+        description: 'StoryService'
+        type: boolean
+        default: false
+      feature_visionmodel_stub:
+        description: 'VisionModel-Stub'
+        type: boolean
+        default: false
+      feature_wallpapermagician_stub:
+        description: 'WallpaperMagician-Stub'
+        type: boolean
+        default: false
+      upload_destination:
+        description: 'Upload destination'
+        required: true
+        default: 'gofile'
+        type: choice
+        options:
+        - 'gofile'
+        - 'github releases'
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            jq \
+            xz-utils \
+            lz4 \
+            unzip \
+            curl \
+            android-sdk-libsparse-utils \
+            e2fsprogs
+
+      - name: Make tools executable
+        run: chmod +x tools/android-tools/* tools/erofs-utils/* upload_gofile.sh scripts/galaxy_ai.sh
+
+      - name: Run Galaxy AI Extraction
+        run: |
+          bash scripts/galaxy_ai.sh \
+            "${{ github.event.inputs.url }}" \
+            "${{ github.event.inputs.zip_type }}" \
+            "${{ github.event.inputs.feature_alkernel }}" \
+            "${{ github.event.inputs.feature_bixbyinterpreter }}" \
+            "${{ github.event.inputs.feature_mediasearch }}" \
+            "${{ github.event.inputs.feature_moments }}" \
+            "${{ github.event.inputs.feature_offlinelanguagemodel_stub }}" \
+            "${{ github.event.inputs.feature_photoeditor_afull }}" \
+            "${{ github.event.inputs.feature_samsunggallery2018 }}" \
+            "${{ github.event.inputs.feature_samsungsmartsuggestions }}" \
+            "${{ github.event.inputs.feature_secsettingsintelligence }}" \
+            "${{ github.event.inputs.feature_semanticsearchcore }}" \
+            "${{ github.event.inputs.feature_spritewallpaper }}" \
+            "${{ github.event.inputs.feature_storyservice }}" \
+            "${{ github.event.inputs.feature_visionmodel_stub }}" \
+            "${{ github.event.inputs.feature_wallpapermagician_stub }}"
+
+      - name: Get Firmware Info
+        id: fwinfo
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          AP_CODE=$(cat ap_code.txt 2>/dev/null || echo "Unknown")
+          CSC_CODE=$(cat csc_code.txt 2>/dev/null || echo "Unknown")
+          BASE_TAG=$(date +"%d%m%Y_%H,%M,%S")
+          RELEASE_TAG="$BASE_TAG"
+          if gh release view "$RELEASE_TAG" &>/dev/null 2>&1; then
+            SUFFIX=1
+            while gh release view "${BASE_TAG}_${SUFFIX}" &>/dev/null 2>&1; do
+              SUFFIX=$((SUFFIX + 1))
+            done
+            RELEASE_TAG="${BASE_TAG}_${SUFFIX}"
+          fi
+          echo "ap_code=$AP_CODE" >> $GITHUB_OUTPUT
+          echo "csc_code=$CSC_CODE" >> $GITHUB_OUTPUT
+          echo "release_tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Upload to GoFile
+        if: ${{ github.event.inputs.upload_destination == 'gofile' }}
+        run: |
+          if [ -f "output/GalaxyAI.zip" ]; then
+            bash upload_gofile.sh output/GalaxyAI.zip
+          else
+            echo "❌ No files to upload"
+            exit 1
+          fi
+
+      - name: Upload to GitHub Releases
+        if: ${{ github.event.inputs.upload_destination == 'github releases' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ ! -f "output/GalaxyAI.zip" ]; then
+            echo "❌ No files to upload"
+            exit 1
+          fi
+
+          NOTES_FILE=$(mktemp)
+          ASSETS=()
+          SIZE_LIMIT=2147483648
+          FILESIZE=$(stat -c%s "output/GalaxyAI.zip")
+
+          if [ "$FILESIZE" -gt "$SIZE_LIMIT" ]; then
+            if bash upload_gofile.sh "output/GalaxyAI.zip"; then
+              GOFILE_URL=$(cat download_url.txt)
+              echo "GalaxyAI.zip: ${GOFILE_URL}" >> "$NOTES_FILE"
+            else
+              echo "GalaxyAI.zip: ❌ GoFile upload failed" >> "$NOTES_FILE"
+            fi
+          else
+            ASSETS+=("output/GalaxyAI.zip")
+          fi
+
+          gh release create "${{ steps.fwinfo.outputs.release_tag }}" \
+            --title "${{ steps.fwinfo.outputs.ap_code }} | ${{ steps.fwinfo.outputs.csc_code }} | Galaxy AI" \
+            --notes-file "$NOTES_FILE" \
+            "${ASSETS[@]}"
+
+          rm -f "$NOTES_FILE"
+          
