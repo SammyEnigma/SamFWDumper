@@ -22,37 +22,44 @@ shift 2
 
 chmod +x tools/android-tools/* tools/erofs-utils/* 2>/dev/null || true
 
-# PORT_USAGE not implemented yet
 if [ "$ZIP_TYPE" = "PORT_USAGE" ]; then
   echo "PORT_USAGE is not available yet. Coming soon."
   exit 0
 fi
 
 # Build list of selected features
-FEATURES_LIST=""
-[ "${1}" = "true" ] && FEATURES_LIST="$FEATURES_LIST AlKernel"
-[ "${2}" = "true" ] && FEATURES_LIST="$FEATURES_LIST BixbyInterpreter"
-[ "${3}" = "true" ] && FEATURES_LIST="$FEATURES_LIST MediaSearch"
-[ "${4}" = "true" ] && FEATURES_LIST="$FEATURES_LIST Moments"
-[ "${5}" = "true" ] && FEATURES_LIST="$FEATURES_LIST OfflineLanguageModel"
-[ "${6}" = "true" ] && FEATURES_LIST="$FEATURES_LIST PhotoEditor"
-[ "${7}" = "true" ] && FEATURES_LIST="$FEATURES_LIST SamsungGallery"
-[ "${8}" = "true" ] && FEATURES_LIST="$FEATURES_LIST SamsungSmartSuggestions"
-[ "${9}" = "true" ] && FEATURES_LIST="$FEATURES_LIST SecSettingsIntelligence"
-[ "${10}" = "true" ] && FEATURES_LIST="$FEATURES_LIST SemanticSearch"
-[ "${11}" = "true" ] && FEATURES_LIST="$FEATURES_LIST SpriteWallpaper"
-[ "${12}" = "true" ] && FEATURES_LIST="$FEATURES_LIST StoryService"
-[ "${13}" = "true" ] && FEATURES_LIST="$FEATURES_LIST VisionModel"
-[ "${14}" = "true" ] && FEATURES_LIST="$FEATURES_LIST WallpaperMagician"
-FEATURES_LIST="${FEATURES_LIST# }"
+# Args 1-14: priv-app, 15-17: app
+PRIV_FEATURES=""
+[ "${1}" = "true" ] && PRIV_FEATURES="$PRIV_FEATURES AlKernel"
+[ "${2}" = "true" ] && PRIV_FEATURES="$PRIV_FEATURES BixbyInterpreter"
+[ "${3}" = "true" ] && PRIV_FEATURES="$PRIV_FEATURES MediaSearch"
+[ "${4}" = "true" ] && PRIV_FEATURES="$PRIV_FEATURES Moments"
+[ "${5}" = "true" ] && PRIV_FEATURES="$PRIV_FEATURES OfflineLanguageModel"
+[ "${6}" = "true" ] && PRIV_FEATURES="$PRIV_FEATURES PhotoEditor"
+[ "${7}" = "true" ] && PRIV_FEATURES="$PRIV_FEATURES SamsungGallery"
+[ "${8}" = "true" ] && PRIV_FEATURES="$PRIV_FEATURES SamsungSmartSuggestions"
+[ "${9}" = "true" ] && PRIV_FEATURES="$PRIV_FEATURES SecSettingsIntelligence"
+[ "${10}" = "true" ] && PRIV_FEATURES="$PRIV_FEATURES SemanticSearch"
+[ "${11}" = "true" ] && PRIV_FEATURES="$PRIV_FEATURES SpriteWallpaper"
+[ "${12}" = "true" ] && PRIV_FEATURES="$PRIV_FEATURES StoryService"
+[ "${13}" = "true" ] && PRIV_FEATURES="$PRIV_FEATURES VisionModel"
+[ "${14}" = "true" ] && PRIV_FEATURES="$PRIV_FEATURES WallpaperMagician"
+PRIV_FEATURES="${PRIV_FEATURES# }"
 
-if [ -z "$FEATURES_LIST" ]; then
+APP_FEATURES=""
+[ "${15}" = "true" ] && APP_FEATURES="$APP_FEATURES SketchBook"
+[ "${16}" = "true" ] && APP_FEATURES="$APP_FEATURES VideoEditorLite"
+[ "${17}" = "true" ] && APP_FEATURES="$APP_FEATURES VisualCloudCore"
+APP_FEATURES="${APP_FEATURES# }"
+
+if [ -z "$PRIV_FEATURES" ] && [ -z "$APP_FEATURES" ]; then
   echo "❌ No features selected!"
   exit 1
 fi
 
 echo "Zip type: $ZIP_TYPE"
-echo "Selected features: $FEATURES_LIST"
+echo "priv-app: $PRIV_FEATURES"
+echo "app: $APP_FEATURES"
 
 echo ""; echo "[1/6] Downloading..."
 wget -q --no-check-certificate --content-disposition "$URL"
@@ -117,20 +124,22 @@ else
 fi
 
 mkdir -p galaxy_ai/system/priv-app
+mkdir -p galaxy_ai/system/app
 
 echo ""; echo "[5/6] Extracting selected features..."
 
 copy_feature() {
   local SEARCH_TERM="$1"
   local SEARCH_DIR="$2"
-  local LABEL="$3"
+  local SUBDIR="$3"
+  local LABEL="$4"
   
-  local FOUND_DIR=$(find "$SEARCH_DIR" -maxdepth 4 -type d -path "*/priv-app/${SEARCH_TERM}*" 2>/dev/null | head -1)
+  local FOUND_DIR=$(find "$SEARCH_DIR" -maxdepth 4 -type d -path "*/${SUBDIR}/${SEARCH_TERM}*" 2>/dev/null | head -1)
   if [ -n "$FOUND_DIR" ] && [ -d "$FOUND_DIR" ]; then
     local FOLDER_NAME=$(basename "$FOUND_DIR")
-    mkdir -p "galaxy_ai/system/priv-app/$FOLDER_NAME"
-    cp -r "$FOUND_DIR"/* "galaxy_ai/system/priv-app/$FOLDER_NAME/"
-    echo "    ✓ $FOLDER_NAME ($LABEL)"
+    mkdir -p "galaxy_ai/system/${SUBDIR}/$FOLDER_NAME"
+    cp -r "$FOUND_DIR"/* "galaxy_ai/system/${SUBDIR}/$FOLDER_NAME/"
+    echo "    ✓ $FOLDER_NAME (${LABEL})"
     return 0
   fi
   return 1
@@ -143,7 +152,7 @@ if [ -n "$SYSTEM_IMG" ] && [ -f "$SYSTEM_IMG" ]; then
     echo "  ✅ System extracted via erofs"
   else
     echo "  erofs failed - trying debugfs..."
-    for FEAT in $FEATURES_LIST; do
+    for FEAT in $PRIV_FEATURES; do
       for SRC_PATH in "priv-app" "system/priv-app"; do
         if debugfs -R "ls $SRC_PATH" "$SYSTEM_IMG" 2>/dev/null | grep -q "$FEAT"; then
           MATCHING=$(debugfs -R "ls $SRC_PATH" "$SYSTEM_IMG" 2>/dev/null | grep "$FEAT" | awk '{print $NF}' | head -1)
@@ -152,10 +161,22 @@ if [ -n "$SYSTEM_IMG" ] && [ -f "$SYSTEM_IMG" ]; then
         fi
       done
     done
+    for FEAT in $APP_FEATURES; do
+      for SRC_PATH in "app" "system/app"; do
+        if debugfs -R "ls $SRC_PATH" "$SYSTEM_IMG" 2>/dev/null | grep -q "$FEAT"; then
+          MATCHING=$(debugfs -R "ls $SRC_PATH" "$SYSTEM_IMG" 2>/dev/null | grep "$FEAT" | awk '{print $NF}' | head -1)
+          mkdir -p "system_extracted/app/$MATCHING"
+          debugfs -R "rdump $SRC_PATH/$MATCHING system_extracted/app/$MATCHING" "$SYSTEM_IMG" 2>/dev/null
+        fi
+      done
+    done
   fi
 
-  for FEAT in $FEATURES_LIST; do
-    copy_feature "$FEAT" "system_extracted" "system" || true
+  for FEAT in $PRIV_FEATURES; do
+    copy_feature "$FEAT" "system_extracted" "priv-app" "system/priv-app" || true
+  done
+  for FEAT in $APP_FEATURES; do
+    copy_feature "$FEAT" "system_extracted" "app" "system/app" || true
   done
   rm -rf system_extracted
 fi
@@ -167,7 +188,7 @@ if [ -n "$PRODUCT_IMG" ] && [ -f "$PRODUCT_IMG" ]; then
     echo "  ✅ Product extracted via erofs"
   else
     echo "  product erofs failed - trying debugfs..."
-    for FEAT in $FEATURES_LIST; do
+    for FEAT in $PRIV_FEATURES; do
       for SRC_PATH in "priv-app" "product/priv-app"; do
         if debugfs -R "ls $SRC_PATH" "$PRODUCT_IMG" 2>/dev/null | grep -q "$FEAT"; then
           MATCHING=$(debugfs -R "ls $SRC_PATH" "$PRODUCT_IMG" 2>/dev/null | grep "$FEAT" | awk '{print $NF}' | head -1)
@@ -176,15 +197,33 @@ if [ -n "$PRODUCT_IMG" ] && [ -f "$PRODUCT_IMG" ]; then
         fi
       done
     done
+    for FEAT in $APP_FEATURES; do
+      for SRC_PATH in "app" "product/app"; do
+        if debugfs -R "ls $SRC_PATH" "$PRODUCT_IMG" 2>/dev/null | grep -q "$FEAT"; then
+          MATCHING=$(debugfs -R "ls $SRC_PATH" "$PRODUCT_IMG" 2>/dev/null | grep "$FEAT" | awk '{print $NF}' | head -1)
+          mkdir -p "product_extracted/app/$MATCHING"
+          debugfs -R "rdump $SRC_PATH/$MATCHING product_extracted/app/$MATCHING" "$PRODUCT_IMG" 2>/dev/null
+        fi
+      done
+    done
   fi
 
-  for FEAT in $FEATURES_LIST; do
+  for FEAT in $PRIV_FEATURES; do
     FOUND_DIR=$(find product_extracted -maxdepth 4 -type d -path "*/priv-app/${FEAT}*" 2>/dev/null | head -1)
     if [ -n "$FOUND_DIR" ] && [ -d "$FOUND_DIR" ]; then
       FOLDER_NAME=$(basename "$FOUND_DIR")
       mkdir -p "galaxy_ai/system/priv-app/$FOLDER_NAME"
       cp -r "$FOUND_DIR"/* "galaxy_ai/system/priv-app/$FOLDER_NAME/"
-      echo "    ✓ $FOLDER_NAME (product)"
+      echo "    ✓ $FOLDER_NAME (product/priv-app)"
+    fi
+  done
+  for FEAT in $APP_FEATURES; do
+    FOUND_DIR=$(find product_extracted -maxdepth 4 -type d -path "*/app/${FEAT}*" 2>/dev/null | head -1)
+    if [ -n "$FOUND_DIR" ] && [ -d "$FOUND_DIR" ]; then
+      FOLDER_NAME=$(basename "$FOUND_DIR")
+      mkdir -p "galaxy_ai/system/app/$FOLDER_NAME"
+      cp -r "$FOUND_DIR"/* "galaxy_ai/system/app/$FOLDER_NAME/"
+      echo "    ✓ $FOLDER_NAME (product/app)"
     fi
   done
   rm -rf product_extracted
