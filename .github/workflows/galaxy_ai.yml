@@ -26,7 +26,7 @@ on:
         - 'MODULES_USAGE'
         - 'PORT_USAGE'
       feature_alkernel:
-        description: '━━━ priv-app ━━━ AlKernel'
+        description: 'AlKernel'
         type: boolean
         default: true
       feature_bixbyinterpreter:
@@ -82,7 +82,7 @@ on:
         type: boolean
         default: true
       feature_sketchbook:
-        description: '━━━ app ━━━ SketchBook'
+        description: 'SketchBook'
         type: boolean
         default: true
       feature_videoeditorlite:
