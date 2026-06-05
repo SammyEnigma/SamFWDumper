@@ -20,13 +20,13 @@ on:
       zip_type:
         description: 'Output structure'
         required: true
-        default: 'For_Modules'
+        default: 'MODULES_USAGE'
         type: choice
         options:
-        - 'For_Modules'
-        - 'For_Ports'
+        - 'MODULES_USAGE'
+        - 'PORT_USAGE'
       feature_alkernel:
-        description: 'AlKernel'
+        description: '━━━ priv-app ━━━ AlKernel'
         type: boolean
         default: true
       feature_bixbyinterpreter:
@@ -81,6 +81,18 @@ on:
         description: 'WallpaperMagician'
         type: boolean
         default: true
+      feature_sketchbook:
+        description: '━━━ app ━━━ SketchBook'
+        type: boolean
+        default: true
+      feature_videoeditorlite:
+        description: 'VideoEditorLite_Dream_N'
+        type: boolean
+        default: true
+      feature_visualcloudcore:
+        description: 'VisualCloudCore'
+        type: boolean
+        default: true
       upload_destination:
         description: 'Upload destination'
         required: true
@@ -132,7 +144,10 @@ jobs:
             "${{ github.event.inputs.feature_spritewallpaper }}" \
             "${{ github.event.inputs.feature_storyservice }}" \
             "${{ github.event.inputs.feature_visionmodel }}" \
-            "${{ github.event.inputs.feature_wallpapermagician }}"
+            "${{ github.event.inputs.feature_wallpapermagician }}" \
+            "${{ github.event.inputs.feature_sketchbook }}" \
+            "${{ github.event.inputs.feature_videoeditorlite }}" \
+            "${{ github.event.inputs.feature_visualcloudcore }}"
 
       - name: Get Firmware Info
         id: fwinfo
