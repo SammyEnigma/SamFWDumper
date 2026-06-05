@@ -27,8 +27,6 @@ if [ "$ZIP_TYPE" = "PORT_USAGE" ]; then
   exit 0
 fi
 
-# Build list of selected features
-# Args 1-14: priv-app, 15-17: app
 PRIV_FEATURES=""
 [ "${1}" = "true" ] && PRIV_FEATURES="$PRIV_FEATURES AlKernel"
 [ "${2}" = "true" ] && PRIV_FEATURES="$PRIV_FEATURES BixbyInterpreter"
@@ -139,13 +137,12 @@ copy_feature() {
     local FOLDER_NAME=$(basename "$FOUND_DIR")
     mkdir -p "galaxy_ai/system/${SUBDIR}/$FOLDER_NAME"
     cp -r "$FOUND_DIR"/* "galaxy_ai/system/${SUBDIR}/$FOLDER_NAME/"
-    echo "    ✓ $FOLDER_NAME (${LABEL})"
+    echo "    ✓ $FOLDER_NAME ($LABEL)"
     return 0
   fi
   return 1
 }
 
-# Extract system.img
 if [ -n "$SYSTEM_IMG" ] && [ -f "$SYSTEM_IMG" ]; then
   mkdir -p system_extracted
   if tools/erofs-utils/extract.erofs -i "$SYSTEM_IMG" -x -o system_extracted/ >/dev/null 2>&1; then
@@ -181,7 +178,6 @@ if [ -n "$SYSTEM_IMG" ] && [ -f "$SYSTEM_IMG" ]; then
   rm -rf system_extracted
 fi
 
-# Extract product.img
 if [ -n "$PRODUCT_IMG" ] && [ -f "$PRODUCT_IMG" ]; then
   mkdir -p product_extracted
   if tools/erofs-utils/extract.erofs -i "$PRODUCT_IMG" -x -o product_extracted/ >/dev/null 2>&1; then
