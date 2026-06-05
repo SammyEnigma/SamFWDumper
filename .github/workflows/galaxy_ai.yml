@@ -25,12 +25,28 @@ on:
         options:
         - 'MODULES_USAGE'
         - 'PORT_USAGE'
+      feature_accessibility:
+        description: 'Accessibility'
+        type: boolean
+        default: true
+      feature_aircommand:
+        description: 'AirCommand'
+        type: boolean
+        default: true
       feature_alkernel:
         description: 'AlKernel'
         type: boolean
         default: true
+      feature_bixby:
+        description: 'Bixby'
+        type: boolean
+        default: true
       feature_bixbyinterpreter:
         description: 'BixbyInterpreter'
+        type: boolean
+        default: true
+      feature_dressroom:
+        description: 'DressRoom'
         type: boolean
         default: true
       feature_mediasearch:
@@ -49,6 +65,10 @@ on:
         description: 'PhotoEditor'
         type: boolean
         default: true
+      feature_samsungaicore:
+        description: 'SamsungAiCore'
+        type: boolean
+        default: true
       feature_samsunggallery:
         description: 'Samsung Gallery'
         type: boolean
@@ -63,6 +83,10 @@ on:
         default: true
       feature_semanticsearch:
         description: 'SemanticSearch Core'
+        type: boolean
+        default: true
+      feature_sharelive:
+        description: 'ShareLive'
         type: boolean
         default: true
       feature_spritewallpaper:
@@ -131,16 +155,22 @@ jobs:
           bash scripts/galaxy_ai.sh \
             "${{ github.event.inputs.url }}" \
             "${{ github.event.inputs.zip_type }}" \
+            "${{ github.event.inputs.feature_accessibility }}" \
+            "${{ github.event.inputs.feature_aircommand }}" \
             "${{ github.event.inputs.feature_alkernel }}" \
+            "${{ github.event.inputs.feature_bixby }}" \
             "${{ github.event.inputs.feature_bixbyinterpreter }}" \
+            "${{ github.event.inputs.feature_dressroom }}" \
             "${{ github.event.inputs.feature_mediasearch }}" \
             "${{ github.event.inputs.feature_moments }}" \
             "${{ github.event.inputs.feature_offlinelanguagemodel }}" \
             "${{ github.event.inputs.feature_photoeditor }}" \
+            "${{ github.event.inputs.feature_samsungaicore }}" \
             "${{ github.event.inputs.feature_samsunggallery }}" \
             "${{ github.event.inputs.feature_samsungsmartsuggestions }}" \
             "${{ github.event.inputs.feature_secsettingsintelligence }}" \
             "${{ github.event.inputs.feature_semanticsearch }}" \
+            "${{ github.event.inputs.feature_sharelive }}" \
             "${{ github.event.inputs.feature_spritewallpaper }}" \
             "${{ github.event.inputs.feature_storyservice }}" \
             "${{ github.event.inputs.feature_visionmodel }}" \
